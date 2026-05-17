@@ -1,0 +1,231 @@
+[1mdiff --git a/.gitignore b/.gitignore[m
+[1mdeleted file mode 100644[m
+[1mindex 00429b9..0000000[m
+[1m--- a/.gitignore[m
+[1m+++ /dev/null[m
+[36m@@ -1,36 +0,0 @@[m
+[31m-# 报告图片（每次生成，不需要上传）[m
+[31m-*_report.png[m
+[31m-*_report.json[m
+[31m-*_analysis_report.png[m
+[31m-crack_comparison.png[m
+[31m-[m
+[31m-# 微信图片[m
+[31m-微信图片_*[m
+[31m-[m
+[31m-# 数据集和训练结果[m
+[31m-crack-seg/[m
+[31m-datasets/[m
+[31m-runs/[m
+[31m-[m
+[31m-# Python 缓存[m
+[31m-__pycache__/[m
+[31m-*.pyc[m
+[31m-[m
+[31m-# 模型权重[m
+[31m-*.pt[m
+[31m-*.onnx[m
+[31m-[m
+[31m-# PyCharm 配置[m
+[31m-.idea/[m
+[31m-[m
+[31m-# 临时测试文件[m
+[31m-test_*.py[m
+[31m-*_test.py[m
+[31m-train.py[m
+[31m-[m
+[31m-# 官方示例文件（不需要上传）[m
+[31m-docker/[m
+[31m-docs/[m
+[31m-examples/[m
+[31m-tests/[m
+[31m-ultralytics/[m
+\ No newline at end of file[m
+[1mdiff --git a/fix_segmentation.py b/fix_segmentation.py[m
+[1mdeleted file mode 100644[m
+[1mindex b085639..0000000[m
+[1m--- a/fix_segmentation.py[m
+[1m+++ /dev/null[m
+[36m@@ -1,34 +0,0 @@[m
+[31m-from ultralytics import YOLO[m
+[31m-[m
+[31m-# 加载优化后的模型[m
+[31m-model = YOLO('D:/code/yolov11/runs/crack_optimized/finetune_v1/weights/best.pt')[m
+[31m-[m
+[31m-results = model.train([m
+[31m-    data='D:/crack-seg/data.yaml',[m
+[31m-    imgsz=640,[m
+[31m-    batch=8,[m
+[31m-    epochs=20,[m
+[31m-    device=0,[m
+[31m-    workers=0,[m
+[31m-[m
+[31m-    # 关键：降低学习率，精细调整[m
+[31m-    lr0=0.0005,  # 比之前的0.005更低10倍[m
+[31m-    lrf=0.0005,[m
+[31m-[m
+[31m-    # 关闭/降低影响边缘的增强[m
+[31m-    hsv_v=0.2,  # 降低明度增强（原0.6）[m
+[31m-    scale=0.4,  # 降低尺度抖动（原0.8）[m
+[31m-    mixup=0.0,  # 关闭混合增强[m
+[31m-    copy_paste=0.0,  # 关闭复制粘贴[m
+[31m-[m
+[31m-    # 保持后处理优化[m
+[31m-    iou=0.6,[m
+[31m-    conf=0.20,[m
+[31m-[m
+[31m-    # 输出[m
+[31m-    project='runs/crack_fix',[m
+[31m-    name='fix_seg',[m
+[31m-    exist_ok=True,[m
+[31m-)[m
+[31m-[m
+[31m-print("✅ 分割修复完成")[m
+\ No newline at end of file[m
+[1mdiff --git a/image_report.py b/image_report.py[m
+[1mdeleted file mode 100644[m
+[1mindex 620bb9d..0000000[m
+[1m--- a/image_report.py[m
+[1m+++ /dev/null[m
+[36m@@ -1,296 +0,0 @@[m
+[31m-# crack_analysis_report.py[m
+[31m-from ultralytics import YOLO[m
+[31m-import cv2[m
+[31m-import numpy as np[m
+[31m-import matplotlib.pyplot as plt[m
+[31m-import matplotlib[m
+[31m-from datetime import datetime[m
+[31m-import os[m
+[31m-import json[m
+[31m-from skimage.morphology import skeletonize[m
+[31m-[m
+[31m-# ===== 中文显示配置 =====[m
+[31m-matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'SimSun'][m
+[31m-matplotlib.rcParams['axes.unicode_minus'] = False[m
+[31m-# =======================[m
+[31m-[m
+[31m-[m
+[31m-class CrackAnalyzer:[m
+[31m-    def __init__(self, model_path, pixel_to_mm_ratio=None):[m
+[31m-        self.model = YOLO(model_path)[m
+[31m-        self.ratio = pixel_to_mm_ratio[m
+[31m-[m
+[31m-    def analyze_single_crack(self, mask, original_shape):[m
+[31m-        """分析单个裂纹的详细几何指标"""[m
+[31m-        if mask is None or mask.sum() == 0:[m
+[31m-            return None[m
+[31m-[m
+[31m-        if mask.shape != original_shape:[m
+[31m-            mask = cv2.resize(mask, (original_shape[1], original_shape[0]))[m
+[31m-[m
+[31m-        mask_binary = (mask * 255).astype(np.uint8)[m
+[31m-[m
+[31m-        # 裂纹面积[m
+[31m-        area_pixel = np.sum(mask_binary > 0)[m
+[31m-[m
+[31m-        # 裂纹周长[m
+[31m-        contours, _ = cv2.findContours(mask_binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[m
+[31m-        perimeter_pixel = sum(cv2.arcLength(c, True) for c in contours)[m
+[31m-[m
+[31m-        # 最大宽度[m
+[31m-        dist_transform = cv2.distanceTransform(mask_binary, cv2.DIST_L2, 5)[m
+[31m-        max_width_pixel = np.max(dist_transform) * 2[m
+[31m-[m
+[31m-        # 裂纹长度（骨架总像素）[m
+[31m-        skeleton = self._skeletonize(mask_binary)[m
+[31m-        longest_length_pixel = float(np.sum(skeleton > 0))[m
+[31m-[m
+[31m-        # 严重程度评估[m
+[31m-        severity = self._assess_severity(area_pixel, max_width_pixel, longest_length_pixel)[m
+[31m-[m
+[31m-        result = {[m
+[31m-            'area_pixel': int(area_pixel),[m
+[31m-            'perimeter_pixel': int(perimeter_pixel),[m
+[31m-            'max_width_pixel': float(max_width_pixel),[m
+[31m-            'longest_length_pixel': float(longest_length_pixel),[m
+[31m-            'severity': severity['grade'],[m
+[31m-            'severity_score': severity['score'],[m
+[31m-            'suggestion': severity['suggestion'][m
+[31m-        }[m
+[31m-[m
+[31m-        if self.ratio:[m
+[31m-            result['area_mm2'] = round(area_pixel * (self.ratio ** 2), 2)[m
+[31m-            result['max_width_mm'] = round(max_width_pixel * self.ratio, 2)[m
+[31m-            result['longest_length_mm'] = round(longest_length_pixel * self.ratio, 2)[m
+[31m-[m
+[31m-        return result[m
+[31m-[m
+[31m-    def _skeletonize(self, mask):[m
+[31m-        """骨架化"""[m
+[31m-        try:[m
+[31m-            # skeletonize 已在文件顶部导入[m
+[31m-            skeleton = skeletonize(mask > 0).astype(np.uint8) * 255[m
+[31m-        except ImportError:[m
+[31m-            skeleton = self._simple_skeletonize(mask)[m
+[31m-        except Exception as e:[m
+[31m-            print(f"骨架化失败: {e}")[m
+[31m-            skeleton = np.zeros_like(mask)[m
+[31m-        return skeleton[m
+[31m-[m
+[31m-    @staticmethod[m
+[31m-    def _simple_skeletonize(mask):[m
+[31m-        """简单的骨架化"""[m
+[31m-        skeleton = mask.copy()[m
+[31m-        kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))[m
+[31m-        result = np.zeros_like(mask)[m
+[31m-        while True:[m
+[31m-            eroded = cv2.erode(skeleton, kernel)[m
+[31m-            temp = cv2.dilate(eroded, kernel)[m
+[31m-            temp = cv2.subtract(skeleton, temp)[m
+[31m-            result = cv2.bitwise_or(result, temp)[m
+[31m-            skeleton = eroded[m
+[31m-            if cv2.countNonZero(skeleton) == 0:[m
+[31m-                break[m
+[31m-        return result[m
+[31m-[m
+[31m-    @staticmethod[m
+[31m-    def _assess_severity(area, max_width, length):[m
+[31m-        """评估裂纹严重程度"""[m
+[31m-        score = 0[m
+[31m-        if area < 1000:[m
+[31m-            score += 10[m
+[31m-        elif area < 5000:[m
+[31m-            score += 20[m
+[31m-        elif area < 20000:[m
+[31m-            score += 30[m
+[31m-        else:[m
+[31m-            score += 40[m
+[31m-[m
+[31m-        if max_width < 5:[m
+[31m-            score += 10[m
+[31m-        elif max_width < 15:[m
+[31m-            score += 20[m
+[31m-        else:[m
+[31m-            score += 30[m
+[31m-[m
+[31m-        if length < 100:[m
+[31m-            score += 10[m
+[31m-        elif length < 300:[m
+[31m-            score += 20[m
+[31m-        else:[m
+[31m-            score += 30[m
+[31m-[m
+[31m-        if score < 30:[m
+[31m-            grade = "轻微"[m
+[31m-            suggestion = "建议观察"[m
+[31m-        elif score < 60:[m
+[31m-            grade = "中度"[m
+[31m-            suggestion = "建议维修"[m
+[31m-        else:[m
+[31m-            grade = "严重"[m
+[31m-            suggestion = "立即处理"[m
+[31m-[m
+[31m-        return {'grade': grade, 'score': score, 'suggestion': suggestion}[m
+[31m-[m
+[31m-    def generate_report(self, img_path, save_path=None, show=True):[m
+[31m-        """生成裂纹分析报告"""[m
+[31m-        img = cv2.imread(img_path)[m
+[31m-        if img is None:[m
+[31m-            print(f"无法读取图片: {img_path}")[m
+[31m-            return None, None[m
+[31m
