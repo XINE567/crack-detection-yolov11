@@ -16,7 +16,7 @@ if __name__ == '__main__':
         patience=20,
         save=True,
         project='runs/crack_seg',
-        name='train6',
+        name='crack_seg',
     )
 
     print("✅ 训练完成！")

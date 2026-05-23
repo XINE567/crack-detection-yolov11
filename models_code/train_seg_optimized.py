@@ -27,8 +27,8 @@ results = model.train(
     dropout=0.1,  # dropout（防过拟合）
 
     # 输出配置
-    project='runs/crack_optimized',
-    name='finetune_v1',
+    project='runs/crack_seg_optimized',
+    name='crack_seg_optimized',
     exist_ok=True,
 )
 
