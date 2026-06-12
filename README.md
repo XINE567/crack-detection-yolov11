@@ -1,124 +1,205 @@
-# YOLO11-seg 裂纹检测 RKNN 部署包
+# yolo11
 
-## 功能特点
+## Table of contents
 
-- 支持 **YOLO11-seg** 实例分割模型
-- 输出裂纹的**精确形状掩码**（不只是边界框）
-- 支持边界框 + 分割掩码叠加显示
-- 适配 RK3588 开发板
+- [1. Description](#1-description)
+- [2. Current Support Platform](#2-current-support-platform)
+- [3. Pretrained Model](#3-pretrained-model)
+- [4. Convert to RKNN](#4-convert-to-rknn)
+- [5. Python Demo](#5-python-demo)
+- [6. Android Demo](#6-android-demo)
+  - [6.1 Compile and Build](#61-compile-and-build)
+  - [6.2 Push demo files to device](#62-push-demo-files-to-device)
+  - [6.3 Run demo](#63-run-demo)
+- [7. Linux Demo](#7-linux-demo)
+  - [7.1 Compile and Build](#71-compile-and-build)
+  - [7.2 Push demo files to device](#72-push-demo-files-to-device)
+  - [7.3 Run demo](#73-run-demo)
+- [8. Expected Results](#8-expected-results)
 
-## 项目结构
 
-```
-crack_detector_standalone/
-├── convert_onnx_to_rknn.py    # ONNX转RKNN脚本
-├── calib.txt                   # 校准数据集配置
-├── README.md                   # 使用说明
-├── model/                      # 模型目录（放您的ONNX和RKNN模型）
-├── dataset/                    # 校准图像目录
-└── cpp/
-    ├── main.cc                 # 主入口文件
-    ├── crack_detector.cc       # 推理实现（含掩码生成）
-    ├── crack_detector.h        # 头文件
-    ├── CMakeLists.txt          # 编译配置
-    └── build/                  # 编译输出目录
-```
 
-## 模型输出格式
+## 1. Description
 
-- **输出0 (检测头)**: `[1, 37, 8400]`
-  - 通道 0-3: 边界框坐标 (cx, cy, w, h)
-  - 通道 4: 置信度
-  - 通道 5-36: 32个掩码系数
+The model used in this example comes from the following open source projects:  
 
-- **输出1 (原型掩码)**: `[1, 32, H, W]`
-  - 32个原型掩码图
+https://github.com/airockchip/ultralytics_yolo11
 
-- **最终掩码**: `掩码系数 × 原型掩码 → Sigmoid → 精确裂纹形状`
 
-## 使用步骤
 
-### 第一步：准备模型和数据
+## 2. Current Support Platform
 
-1. 将您的 YOLO11-seg ONNX 模型放入 `model/` 目录
-2. 在 `dataset/` 目录放入 100-500 张校准图像
-3. 更新 `calib.txt` 添加图像路径
+RV1103, RV1106, RK3562, RK3566, RK3568, RK3576, RK3588, RV1109, RV1126, RK1808, RK3399PRO
 
-### 第二步：模型转换
 
-```bash
-python convert_onnx_to_rknn.py \
-    --onnx_path model/your_model.onnx \
-    --output_path model/crack_detector.rknn \
-    --calib_data calib.txt \
-    --quantize
-```
 
-### 第三步：交叉编译
+## 3. Pretrained Model
 
-```bash
-cd cpp/build
-cmake ..
-make -j4
-```
+Download link: 
 
-### 第四步：部署到开发板
+[./yolo11n.onnx](https://ftrg.zbox.filez.com/v2/delivery/data/95f00b0fc900458ba134f8b180b3f7a1/examples/yolo11/yolo11n.onnx)<br />[./yolo11s.onnx](https://ftrg.zbox.filez.com/v2/delivery/data/95f00b0fc900458ba134f8b180b3f7a1/examples/yolo11/yolo11s.onnx)<br />[./yolo11m.onnx](https://ftrg.zbox.filez.com/v2/delivery/data/95f00b0fc900458ba134f8b180b3f7a1/examples/yolo11/yolo11m.onnx)
 
-```bash
-# 复制可执行文件
-scp rknn_crack_detector root@rk3588:/root/
-
-# 复制模型
-scp ../model/crack_detector.rknn root@rk3588:/root/model/
-```
-
-### 第五步：运行测试
-
-```bash
-# 在开发板上运行
-cd /root
-./rknn_crack_detector model/crack_detector.rknn
-```
-
-## 配置说明
-
-### 检测阈值
-
-在 `cpp/crack_detector.cc` 中修改：
-```cpp
-#define CONF_THRESHOLD 0.5f  // 置信度阈值
-```
-
-### 掩码透明度
-
-在 `cpp/main.cc` 中修改：
-```cpp
-#define MASK_ALPHA 0.5  // 掩码叠加透明度 (0.0-1.0)
-```
-
-### 摄像头设备号
-
-在 `cpp/main.cc` 中修改：
-```cpp
-cv::VideoCapture cap(0);  // 设备号
-```
-
-## 注意事项
-
-1. 确保 ONNX 模型输入尺寸为 640×640
-2. 校准图像建议与模型输入尺寸一致
-3. 量化模型需要至少 100 张校准图像
-4. 编译前确保交叉编译工具链路径正确
-
-## 显示效果
+Download with shell command:
 
 ```
-┌─────────────────────────────────┐
-│  ┌───────────────┐              │
-│  │   精确裂纹形状 │  ← 绿色掩码  │
-│  │  ████████████ │              │
-│  └───────────────┘  ← 红色边框  │
-│                                 │
-│  crack 95.0%      ← 置信度标签  │
-└─────────────────────────────────┘
+cd model
+./download_model.sh
 ```
+
+**Note**: For exporting yolo11 onnx models, please refer to [RKOPT_README.zh-CN.md](https://github.com/airockchip/ultralytics_yolo11/blob/main/RKOPT_README.zh-CN.md) / [RKOPT_README.md](https://github.com/airockchip/ultralytics_yolo11/blob/main/RKOPT_README.md)
+
+
+**Note**: The model provided here is an optimized model, which is different from the official original model. Take yolo11n.onnx as an example to show the difference between them.
+1. The comparison of their output information is as follows. The left is the official original model, and the right is the optimized model. As shown in the figure, the original one output is divided into three groups. For example, in the set of outputs ([1,64,80,80],[1,80,80,80],[1,1,80,80]), [1,64,80,80] is the coordinate of the box, [1,80,80,80] is the confidence of the box corresponding to the 80 categories, and [1,1,80,80] is the sum of the confidence of the 80 categories.
+
+<div align=center>
+  <img src="./model_comparison/yolo11_output_comparison.jpg" alt="Image">
+</div>
+
+2. Taking the the set of outputs ([1,64,80,80],[1,80,80,80],[1,1,80,80]) as an example, we remove the subgraphs behind the two convolution nodes in the model, keep the outputs of these two convolutions ([1,64,80,80],[1,80,80,80]), and add a reducesum+clip branch for calculating the sum of the confidence of the 80 categories ([1,1,80,80]).
+
+<div align=center>
+  <img src="./model_comparison/yolo11_graph_comparison.jpg" alt="Image">
+</div>
+
+
+## 4. Convert to RKNN
+
+*Usage:*
+
+```shell
+cd python
+python convert.py <onnx_model> <TARGET_PLATFORM> <dtype(optional)> <output_rknn_path(optional)>
+
+# such as: 
+python convert.py ../model/yolo11n.onnx rk3588
+# output model will be saved as ../model/yolo11.rknn
+```
+
+*Description:*
+
+- `<onnx_model>`: Specify ONNX model path.
+- `<TARGET_PLATFORM>`: Specify NPU platform name. Such as 'rk3588'.
+- `<dtype>(optional)`: Specify as `i8`, `u8` or `fp`. `i8`/`u8` for doing quantization, `fp` for no quantization. Default is `i8`/`u8`.
+- `<output_rknn_path>(optional)`: Specify save path for the RKNN model, default save in the same directory as ONNX model with name `yolo11.rknn`
+
+
+
+## 5. Python Demo
+
+*Usage:*
+
+```shell
+cd python
+# Inference with PyTorch model or ONNX model
+python yolo11.py --model_path <pt_model/onnx_model> --img_show
+
+# Inference with RKNN model
+python yolo11.py --model_path <rknn_model> --target <TARGET_PLATFORM> --img_show
+```
+
+*Description:*
+
+- `<TARGET_PLATFORM>`: Specify NPU platform name. Such as 'rk3588'.
+
+- `<pt_model / onnx_model / rknn_model>`: Specify the model path.
+
+
+
+## 6. Android Demo
+
+**Note: RK1808, RV1109, RV1126 does not support Android.**
+
+#### 6.1 Compile and Build
+
+Please refer to the [Compilation_Environment_Setup_Guide](../../docs/Compilation_Environment_Setup_Guide.md#android-platform) document to setup a cross-compilation environment and complete the compilation of C/C++ Demo.  
+**Note: Please replace the model name with `yolo11`.**
+
+#### 6.2 Push demo files to device
+
+With device connected via USB port, push demo files to devices:
+
+```shell
+adb root
+adb remount
+adb push install/<TARGET_PLATFORM>_android_<ARCH>/rknn_yolo11_demo/ /data/
+```
+
+#### 6.3 Run demo
+
+```sh
+adb shell
+cd /data/rknn_yolo11_demo
+
+export LD_LIBRARY_PATH=./lib
+./rknn_yolo11_demo model/yolo11.rknn model/bus.jpg
+```
+
+- After running, the result was saved as `out.png`. To check the result on host PC, pull back result referring to the following command: 
+
+  ```sh
+  adb pull /data/rknn_yolo11_demo/out.png
+  ```
+
+- Output result refer [Expected Results](#8-expected-results).
+
+
+
+## 7. Linux Demo
+
+#### 7.1 Compile and Build
+
+Please refer to the [Compilation_Environment_Setup_Guide](../../docs/Compilation_Environment_Setup_Guide.md#linux-platform) document to setup a cross-compilation environment and complete the compilation of C/C++ Demo.
+**Note: Please replace the model name with `yolo11`.**
+
+#### 7.2 Push demo files to device
+
+- If device connected via USB port, push demo files to devices:
+
+```shell
+adb push install/<TARGET_PLATFORM>_linux_<ARCH>/rknn_yolo11_demo/ /userdata/
+```
+
+- For other boards, use `scp` or other approaches to push all files under `install/<TARGET_PLATFORM>_linux_<ARCH>/rknn_yolo11_demo/` to `userdata`.
+
+#### 7.3 Run demo
+
+```sh
+adb shell
+cd /userdata/rknn_yolo11_demo
+
+export LD_LIBRARY_PATH=./lib
+./rknn_yolo11_demo model/yolo11.rknn model/bus.jpg
+```
+
+- RV1106/1103 LD_LIBRARY_PATH must specify as the absolute path. Such as 
+
+  ```sh
+  export LD_LIBRARY_PATH=/userdata/rknn_yolo11_demo/lib
+  ```
+
+- After running, the result was saved as `out.png`. To check the result on host PC, pull back result referring to the following command: 
+
+  ```
+  adb pull /userdata/rknn_yolo11_demo/out.png
+  ```
+
+- Output result refer [Expected Results](#8-expected-results).
+
+
+
+## 8. Expected Results
+
+This example will print the labels and corresponding scores of the test image detect results, as follows:
+
+```
+person @ (108 236 224 535) 0.898
+person @ (212 240 284 509) 0.847
+person @ (476 229 559 520) 0.827
+person @ (79 358 118 516) 0.396
+bus  @ (91 136 554 440) 0.948
+```
+
+<img src="result.png">
+
+- Note: Different platforms, different versions of tools and drivers may have slightly different results.

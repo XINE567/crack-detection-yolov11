@@ -1,79 +1,108 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(rknn_crack_detector)
+project(rknn_yolo11_demo)
 
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_C_STANDARD 99)
+if (ENABLE_ASAN)
+	message(STATUS "BUILD WITH ADDRESS SANITIZER")
+	set (CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+	set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+	set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address")
+endif ()
 
-set(CMAKE_SYSTEM_NAME Linux)
-set(CMAKE_SYSTEM_PROCESSOR aarch64)
+set(rknpu_yolo11_file rknpu2/yolo11.cc)
 
-set(RKNN_TOOLCHAIN_PATH /usr)
-set(CMAKE_C_COMPILER ${RKNN_TOOLCHAIN_PATH}/bin/aarch64-linux-gnu-gcc)
-set(CMAKE_CXX_COMPILER ${RKNN_TOOLCHAIN_PATH}/bin/aarch64-linux-gnu-g++)
+if (TARGET_SOC STREQUAL "rv1106" OR TARGET_SOC STREQUAL "rv1103")
+    add_definitions(-DRV1106_1103)
+    set(rknpu_yolo11_file rknpu2/yolo11_rv1106_1103.cc)
+    #dma
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../../3rdparty/allocator/dma)
+endif()
 
-set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
-set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
-set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+if(TARGET_SOC STREQUAL "rk1808" OR TARGET_SOC STREQUAL "rv1109" OR TARGET_SOC STREQUAL "rv1126")
+    add_definitions(-DRKNPU1)
+    set(rknpu_yolo11_file rknpu1/yolo11.cc)
+endif()
 
-set(RKNN_SDK_PATH /home/yp/rk3588_linux_sdk/RK3588/inference/3-atk_yolov5s_recognize/cpp/3rdparty/rknpu2)
-set(LIBRGA_PATH /home/yp/rk3588_linux_sdk/RK3588/inference/3-atk_yolov5s_recognize/cpp/3rdparty/librga)
-set(LIBJPEG_PATH /home/yp/rk3588_linux_sdk/RK3588/inference/3-atk_yolov5s_recognize/cpp/3rdparty/jpeg_turbo)
-set(STB_PATH /home/yp/rk3588_linux_sdk/RK3588/inference/3-atk_yolov5s_recognize/cpp/3rdparty/stb_image)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../../3rdparty/ 3rdparty.out)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../../../utils/ utils.out)
 
-include_directories(
-    ${RKNN_SDK_PATH}/include
-    ${LIBRGA_PATH}/include
-    ${LIBJPEG_PATH}/include
-    ${STB_PATH}
-    ${PROJECT_SOURCE_DIR}
-    ${PROJECT_SOURCE_DIR}/utils
-)
+set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
 
-link_directories(
-    ${RKNN_SDK_PATH}/Linux/aarch64
-    ${LIBRGA_PATH}/Linux/aarch64
-    ${LIBJPEG_PATH}/Linux/aarch64
-)
+file(GLOB SRCS ${CMAKE_CURRENT_SOURCE_DIR}/*.cc)
 
-set(LIBRGA ${LIBRGA_PATH}/Linux/aarch64/librga.so)
-set(LIBJPEG ${LIBJPEG_PATH}/Linux/aarch64/libturbojpeg.a)
-
-find_package(Threads REQUIRED)
-
-add_library(imageutils STATIC
-    ${PROJECT_SOURCE_DIR}/utils/image_utils.c
-)
-target_include_directories(imageutils PUBLIC
-    ${PROJECT_SOURCE_DIR}/utils
-    ${LIBJPEG_PATH}/include
-    ${LIBRGA_PATH}/include
-    ${STB_PATH}
-)
-target_link_libraries(imageutils ${LIBJPEG} ${LIBRGA} Threads::Threads)
-
-add_library(fileutils STATIC
-    ${PROJECT_SOURCE_DIR}/utils/file_utils.c
-)
-target_include_directories(fileutils PUBLIC ${PROJECT_SOURCE_DIR}/utils)
-
-add_library(imagedrawing STATIC
-    ${PROJECT_SOURCE_DIR}/utils/image_drawing.c
-)
-target_include_directories(imagedrawing PUBLIC ${PROJECT_SOURCE_DIR}/utils)
-
-add_executable(rknn_crack_detector
+add_executable(${PROJECT_NAME}
     main.cc
-    crack_detector.cc
+    postprocess.cc
+    ${rknpu_yolo11_file}
 )
 
-target_link_libraries(rknn_crack_detector
+target_link_libraries(${PROJECT_NAME}
     imageutils
     fileutils
-    imagedrawing
-    ${RKNN_SDK_PATH}/Linux/aarch64/librknnrt.so
-    m
-    Threads::Threads
+    imagedrawing    
+    ${LIBRKNNRT}
+    dl
 )
 
-install(TARGETS rknn_crack_detector DESTINATION bin)
+if (CMAKE_SYSTEM_NAME STREQUAL "Android")
+    target_link_libraries(${PROJECT_NAME}
+    log
+)
+endif()
+
+message(STATUS "!!!!!!!!!!!CMAKE_SYSTEM_NAME: ${CMAKE_SYSTEM_NAME}")
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+    find_package(Threads REQUIRED)
+    target_link_libraries(${PROJECT_NAME} Threads::Threads)
+endif()
+
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${LIBRKNNRT_INCLUDES}
+)
+
+
+# Currently zero copy only supports rknpu2, v1103/rv1103b/rv1106 supports zero copy by default
+if (NOT (TARGET_SOC STREQUAL "rv1106" OR TARGET_SOC STREQUAL "rv1103" OR TARGET_SOC STREQUAL "rk1808" 
+    OR TARGET_SOC STREQUAL "rv1109" OR TARGET_SOC STREQUAL "rv1126" OR TARGET_SOC STREQUAL "rv1103b"))
+    add_executable(${PROJECT_NAME}_zero_copy
+        main.cc
+        postprocess.cc
+        rknpu2/yolo11_zero_copy.cc
+    )
+
+    target_compile_definitions(${PROJECT_NAME}_zero_copy PRIVATE ZERO_COPY)
+
+    target_link_libraries(${PROJECT_NAME}_zero_copy
+        imageutils
+        fileutils
+        imagedrawing    
+        ${LIBRKNNRT}
+        dl
+    )
+
+    if (CMAKE_SYSTEM_NAME STREQUAL "Android")
+        target_link_libraries(${PROJECT_NAME}_zero_copy
+        log
+    )
+    endif()
+
+    if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        set(THREADS_PREFER_PTHREAD_FLAG ON)
+        find_package(Threads REQUIRED)
+        target_link_libraries(${PROJECT_NAME}_zero_copy Threads::Threads)
+    endif()
+
+    target_include_directories(${PROJECT_NAME}_zero_copy PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${LIBRKNNRT_INCLUDES}
+    )
+    install(TARGETS ${PROJECT_NAME}_zero_copy DESTINATION .)
+endif()
+
+install(TARGETS ${PROJECT_NAME} DESTINATION .)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../model/bus.jpg DESTINATION model)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../model/coco_80_labels_list.txt DESTINATION model)
+file(GLOB RKNN_FILES "${CMAKE_CURRENT_SOURCE_DIR}/../model/*.rknn")
+install(FILES ${RKNN_FILES} DESTINATION model)

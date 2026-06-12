@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=裂缝巡检系统
+Comment=智能裂缝检测巡检系统
+Exec=adb shell "cd /userdata && python3 crack_inspection_full.py"
+Icon=/usr/share/icons/hicolor/48x48/apps/utilities-terminal.png
+Terminal=true
+Categories=Utility;

@@ -1,117 +1,132 @@
+// Copyright (c) 2024 by Rockchip Electronics Co., Ltd. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+/*-------------------------------------------
+                Includes
+-------------------------------------------*/
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <signal.h>
-#include <sys/time.h>
 
-#include "crack_detector.h"
+#include "yolo11.h"
 #include "image_utils.h"
-#include "image_drawing.h"
 #include "file_utils.h"
+#include "image_drawing.h"
 
-#define LABEL_NAME "crack"
+#if defined(RV1106_1103) 
+    #include "dma_alloc.hpp"
+#endif
 
-static volatile int quit = 0;
-
-static void sig_handler(int signo)
+/*-------------------------------------------
+                  Main Function
+-------------------------------------------*/
+int main(int argc, char **argv)
 {
-    if (signo == SIGINT) {
-        quit = 1;
-    }
-}
-
-int main(int argc, char** argv) {
-    if (argc < 2) {
-        printf("Usage: %s <model_path> [image_path]\n", argv[0]);
-        printf("  model_path: Path to .rknn model file\n");
-        printf("  image_path: Path to test image (optional)\n");
+    if (argc != 3)
+    {
+        printf("%s <model_path> <image_path>\n", argv[0]);
         return -1;
     }
 
-    const char* model_path = argv[1];
-    const char* image_path = argc > 2 ? argv[2] : NULL;
-
-    signal(SIGINT, sig_handler);
+    const char *model_path = argv[1];
+    const char *image_path = argv[2];
 
     int ret;
-    rknn_crack_detector_t ctx;
-    memset(&ctx, 0, sizeof(rknn_crack_detector_t));
+    rknn_app_context_t rknn_app_ctx;
+    memset(&rknn_app_ctx, 0, sizeof(rknn_app_context_t));
 
-    printf("Initializing RKNN model...\n");
-    ret = init_crack_detector(model_path, &ctx);
-    if (ret != 0) {
-        printf("init_crack_detector fail! ret=%d\n", ret);
-        return -1;
+    init_post_process();
+
+    ret = init_yolo11_model(model_path, &rknn_app_ctx);
+    if (ret != 0)
+    {
+        printf("init_yolo11_model fail! ret=%d model_path=%s\n", ret, model_path);
+        goto out;
     }
 
-    if (image_path != NULL) {
-        image_buffer_t src_image;
-        memset(&src_image, 0, sizeof(image_buffer_t));
+    image_buffer_t src_image;
+    memset(&src_image, 0, sizeof(image_buffer_t));
+    ret = read_image(image_path, &src_image);
 
-        printf("Reading image from file: %s\n", image_path);
-        ret = read_image(image_path, &src_image);
-        if (ret != 0) {
-            printf("read_image fail! ret=%d\n", ret);
-            return -1;
-        }
-
-        crack_detect_result_list results;
-        memset(&results, 0, sizeof(results));
-        
-        ret = inference_crack_detector(&ctx, &src_image, &results);
-        if (ret != 0) {
-            printf("inference fail! ret=%d\n", ret);
-            return -1;
-        }
-
-        printf("Detected %d cracks\n", results.count);
-        for (int i = 0; i < results.count; i++) {
-            crack_detect_result_t* det = &results.results[i];
-            printf("%s @ (%d, %d, %d, %d) %.3f\n",
-                   LABEL_NAME, det->box.left, det->box.top,
-                   det->box.right, det->box.bottom, det->prop);
-
-            if (det->mask_data != NULL && det->mask_width > 0 && det->mask_height > 0) {
-                for (int y = 0; y < det->mask_height; y++) {
-                    for (int x = 0; x < det->mask_width; x++) {
-                        int mask_val = det->mask_data[y * det->mask_width + x];
-                        if (mask_val > 0) {
-                            int img_x = det->box.left + x;
-                            int img_y = det->box.top + y;
-                            if (img_x >= 0 && img_x < src_image.width && 
-                                img_y >= 0 && img_y < src_image.height) {
-                                int idx = img_y * src_image.width * 3 + img_x * 3;
-                                src_image.virt_addr[idx] = 0;
-                                src_image.virt_addr[idx + 1] = 255;
-                                src_image.virt_addr[idx + 2] = 0;
-                            }
-                        }
-                    }
-                }
-            }
-
-            draw_rectangle(&src_image, det->box.left, det->box.top,
-                          det->box.right - det->box.left, det->box.bottom - det->box.top,
-                          COLOR_RED, 2);
-
-            char text[256];
-            sprintf(text, "%s %.1f%%", LABEL_NAME, det->prop * 100);
-            draw_text(&src_image, text, det->box.left, det->box.top - 10,
-                     COLOR_GREEN, 16);
-        }
-
-        char output_path[256];
-        sprintf(output_path, "output_%s", image_path);
-        write_image(output_path, &src_image);
-        printf("Output saved to: %s\n", output_path);
-
-        release_detection_results(&results);
-    } else {
-        printf("Please provide an image path for testing.\n");
-        printf("Example: %s model/crack_detector.rknn test.jpg\n", argv[0]);
+#if defined(RV1106_1103) 
+    //RV1106 rga requires that input and output bufs are memory allocated by dma
+    ret = dma_buf_alloc(RV1106_CMA_HEAP_PATH, src_image.size, &rknn_app_ctx.img_dma_buf.dma_buf_fd, 
+                       (void **) & (rknn_app_ctx.img_dma_buf.dma_buf_virt_addr));
+    memcpy(rknn_app_ctx.img_dma_buf.dma_buf_virt_addr, src_image.virt_addr, src_image.size);
+    dma_sync_cpu_to_device(rknn_app_ctx.img_dma_buf.dma_buf_fd);
+    free(src_image.virt_addr);
+    src_image.virt_addr = (unsigned char *)rknn_app_ctx.img_dma_buf.dma_buf_virt_addr;
+    src_image.fd = rknn_app_ctx.img_dma_buf.dma_buf_fd;
+    rknn_app_ctx.img_dma_buf.size = src_image.size;
+#endif
+    
+    if (ret != 0)
+    {
+        printf("read image fail! ret=%d image_path=%s\n", ret, image_path);
+        goto out;
     }
 
-    release_crack_detector(&ctx);
-    printf("Done.\n");
+    object_detect_result_list od_results;
+
+    ret = inference_yolo11_model(&rknn_app_ctx, &src_image, &od_results);
+    if (ret != 0)
+    {
+        printf("init_yolo11_model fail! ret=%d\n", ret);
+        goto out;
+    }
+
+    // 画框和概率
+    char text[256];
+    for (int i = 0; i < od_results.count; i++)
+    {
+        object_detect_result *det_result = &(od_results.results[i]);
+        printf("%s @ (%d %d %d %d) %.3f\n", coco_cls_to_name(det_result->cls_id),
+               det_result->box.left, det_result->box.top,
+               det_result->box.right, det_result->box.bottom,
+               det_result->prop);
+        int x1 = det_result->box.left;
+        int y1 = det_result->box.top;
+        int x2 = det_result->box.right;
+        int y2 = det_result->box.bottom;
+
+        draw_rectangle(&src_image, x1, y1, x2 - x1, y2 - y1, COLOR_BLUE, 3);
+
+        sprintf(text, "%s %.1f%%", coco_cls_to_name(det_result->cls_id), det_result->prop * 100);
+        draw_text(&src_image, text, x1, y1 - 20, COLOR_RED, 10);
+    }
+
+    write_image("out.png", &src_image);
+
+out:
+    deinit_post_process();
+
+    ret = release_yolo11_model(&rknn_app_ctx);
+    if (ret != 0)
+    {
+        printf("release_yolo11_model fail! ret=%d\n", ret);
+    }
+
+    if (src_image.virt_addr != NULL)
+    {
+#if defined(RV1106_1103) 
+        dma_buf_free(rknn_app_ctx.img_dma_buf.size, &rknn_app_ctx.img_dma_buf.dma_buf_fd, 
+                rknn_app_ctx.img_dma_buf.dma_buf_virt_addr);
+#else
+        free(src_image.virt_addr);
+#endif
+    }
+
     return 0;
 }

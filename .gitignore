@@ -1,0 +1,39 @@
+# 报告图片（每次生成，不需要上传）
+*_report.png
+*_report.json
+*_analysis_report.png
+crack_comparison.png
+
+# 微信图片
+微信图片_*
+
+# 数据集和训练结果
+crack-seg/
+datasets/
+runs/
+results/
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 模型权重
+*.pt
+*.onnx
+*.rknn
+
+# PyCharm / VSCode
+.idea/
+.vscode/
+
+# 数据库配置（含密码，使用 config.example.py）
+backend/config.py
+backend_new/backend/config.py
+
+# 官方示例文件（不需要上传）
+docker/
+docs/
+examples/
+tests/
+ultralytics/
