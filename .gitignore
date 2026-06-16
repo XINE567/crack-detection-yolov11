@@ -3,6 +3,9 @@
 *_report.json
 *_analysis_report.png
 crack_comparison.png
+results.csv
+*.png
+*.jpg
 
 # 微信图片
 微信图片_*
@@ -10,14 +13,13 @@ crack_comparison.png
 # 数据集和训练结果
 crack-seg/
 datasets/
-runs/
+
 
 # Python 缓存
 __pycache__/
 *.pyc
-
-# 模型权重
-*.pt
+events.out*
+# 模型
 *.onnx
 
 # PyCharm 配置
