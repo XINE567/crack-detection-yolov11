@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+    <title>巡检记录详情</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            margin: 30px;
+            background-color: #f5f7fa;
+        }
+
+        .container {
+            width: 900px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .info {
+            margin-top: 20px;
+            line-height: 2;
+            font-size: 16px;
+        }
+
+        .image-box {
+            text-align: center;
+            margin-top: 25px;
+        }
+
+        img {
+            max-width: 800px;
+            max-height: 500px;
+            border: 1px solid #ccc;
+        }
+
+        pre {
+            background-color: #f0f2f5;
+            padding: 15px;
+            overflow-x: auto;
+        }
+
+        a {
+            color: #2f6fed;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>巡检记录详情</h1>
+
+    <div class="info">
+        <p><strong>图像ID：</strong>{{ record.image_id }}</p>
+        <p><strong>工单ID：</strong>{{ record.workorder_id }}</p>
+        <p><strong>巡检位置：</strong>{{ record.location }}</p>
+        <p><strong>工单状态：</strong>{{ record.status }}</p>
+        <p><strong>上传时间：</strong>{{ record.upload_time }}</p>
+        <p><strong>裂纹数量：</strong>{{ record.crack_count }}</p>
+        <p><strong>裂纹总面积：</strong>{{ record.crack_area }} 像素</p>
+        <p><strong>最大宽度：</strong>{{ record.max_width }} 像素</p>
+        <p><strong>裂纹总长度：</strong>{{ record.total_length }} 像素</p>
+        <p><strong>严重等级：</strong>{{ record.severity }}</p>
+        <p><strong>处理建议：</strong>{{ record.suggestion }}</p>
+        <p><strong>检测时间：</strong>{{ record.detected_at }}</p>
+    </div>
+
+    <h3 style="text-align:center; margin-top:30px;">巡检图片对比</h3>
+
+    <div class="image-box" style="display:flex; gap:30px; justify-content:center; align-items:flex-start; margin-top:20px;">
+
+        <div style="width:45%; text-align:center;">
+            <h3>原始采集图</h3>
+
+            {% if original_image_url %}
+                <img src="{{ original_image_url }}"
+                    alt="原始采集图"
+                    style="width:100%; max-height:420px; object-fit:contain; border:1px solid #ddd; border-radius:6px;">
+            {% else %}
+                <div style="height:260px; display:flex; align-items:center; justify-content:center; background:#f5f5f5; color:#999; border:1px dashed #ccc; border-radius:6px;">
+                    暂无原始图片
+                </div>
+            {% endif %}
+        </div>
+
+        <div style="width:45%; text-align:center;">
+            <h3>检测结果图</h3>
+
+            <img src="{{ image_url }}"
+                alt="检测结果图"
+                style="width:100%; max-height:420px; object-fit:contain; border:1px solid #ddd; border-radius:6px;">
+        </div>
+
+</div>
+
+    <h3>完整检测结果 JSON</h3>
+    <pre>{{ record.result_json }}</pre>
+
+    <p>
+    <a href="/workorder_page/{{ record.workorder_id }}">返回任务详情</a> |
+    <a href="/records_page">返回巡检记录</a> |
+    <a href="/home">返回首页</a>
+    </p>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+    <title>巡检报告</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            margin: 30px;
+            background: #f5f7fa;
+        }
+
+        .report {
+            width: 95%;
+            max-width: 1350px;
+            margin: 0 auto;
+            background: white;
+            padding: 35px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        h1, h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        .meta {
+            text-align: right;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .section {
+            margin-top: 28px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px 35px;
+            margin-top: 18px;
+        }
+
+        .info-item {
+            border-bottom: 1px solid #eee;
+            padding: 6px 0;
+            line-height: 1.8;
+        }
+
+        .label {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .card {
+            background: #f8fbff;
+            border: 1px solid #dbe8ff;
+            padding: 18px;
+            text-align: center;
+            border-radius: 8px;
+        }
+
+        .number {
+            font-size: 26px;
+            font-weight: bold;
+            color: #2f6fed;
+        }
+
+        .caption {
+            color: #666;
+            margin-top: 6px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 9px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        th {
+            background: #2f6fed;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f6ff;
+        }
+
+        .conclusion {
+            background: #f0f6ff;
+            padding: 16px;
+            border-left: 5px solid #2f6fed;
+            line-height: 1.9;
+            margin-top: 16px;
+        }
+
+        .btn-area {
+            text-align: center;
+            margin-top: 28px;
+        }
+
+        .btn {
+            display: inline-block;
+            margin: 6px;
+            padding: 10px 20px;
+            background: #2f6fed;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .btn-orange {
+            background: #ff9800;
+        }
+
+        .inline-form {
+            display: inline;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+
+            .report {
+                box-shadow: none;
+                width: 100%;
+                padding: 10px;
+            }
+
+            .btn-area {
+                display: none;
+            }
+        }
+
+        .report-img {
+            width: 110px;
+            height: 75px;
+            object-fit: cover;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f5f5f5;
+        }
+
+        .no-img {
+            color: #999;
+            font-size: 13px;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="report">
+    <div class="meta">
+        系统生成报告
+    </div>
+
+    <h1>建筑表面裂纹智能巡检报告</h1>
+
+    <div class="section">
+        <h2>一、巡检任务信息</h2>
+
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="label">任务ID / Session ID：</span>
+                {{ workorder.workorder_id }}
+            </div>
+
+            <div class="info-item">
+                <span class="label">巡检位置：</span>
+                {{ workorder.location }}
+            </div>
+
+            <div class="info-item">
+                <span class="label">巡检人员：</span>
+                {% if workorder.inspector_name %}
+                    {{ workorder.inspector_name }}
+                {% elif workorder.username %}
+                    {{ workorder.username }}
+                {% else %}
+                    未指定
+                {% endif %}
+            </div>
+
+            <div class="info-item">
+                <span class="label">任务状态：</span>
+                {{ workorder.status }}
+            </div>
+
+            <div class="info-item">
+                <span class="label">创建时间：</span>
+                {{ workorder.created_at }}
+            </div>
+
+            <div class="info-item">
+                <span class="label">巡检开始时间：</span>
+                {{ workorder.start_time }}
+            </div>
+
+            <div class="info-item">
+                <span class="label">巡检结束时间：</span>
+                {{ workorder.end_time }}
+            </div>
+
+            <div class="info-item">
+                <span class="label">完成时间：</span>
+                {{ workorder.completed_at }}
+            </div>
+
+            <div class="info-item">
+                <span class="label">采集数量：</span>
+                {{ workorder.capture_count }}
+            </div>
+
+            <div class="info-item">
+                <span class="label">任务说明：</span>
+                {% if workorder.description %}
+                    {{ workorder.description }}
+                {% else %}
+                    无
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>二、巡检统计</h2>
+
+        <div class="summary-cards">
+            <div class="card">
+                <div class="number">{{ image_count }}</div>
+                <div class="caption">入库图片数量</div>
+            </div>
+
+            <div class="card">
+                <div class="number">{{ total_crack_count }}</div>
+                <div class="caption">裂纹总数量</div>
+            </div>
+
+            <div class="card">
+                <div class="number">{{ max_width }}</div>
+                <div class="caption">最大裂纹宽度 / 像素</div>
+            </div>
+
+            <div class="card">
+                <div class="number">{{ highest_severity }}</div>
+                <div class="caption">最高严重等级</div>
+            </div>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="label">裂纹总面积：</span>
+                {{ total_crack_area }} 像素²
+            </div>
+
+            <div class="info-item">
+                <span class="label">裂纹总长度：</span>
+                {{ total_length }} 像素
+            </div>
+
+            <div class="info-item">
+                <span class="label">平均置信度：</span>
+                {{ avg_confidence }}
+            </div>
+
+            <div class="info-item">
+                <span class="label">统计说明：</span>
+                当前几何指标采用像素级统计结果。
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>三、检测记录明细</h2>
+
+        {% if records and records|length > 0 %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>图像ID</th>
+                    <th>采集ID</th>
+                    <th>原始图</th>
+                    <th>检测图</th>
+                    <th>图片文件名</th>
+                    <th>采集时间</th>
+                    <th>裂纹数量</th>
+                    <th>裂纹面积</th>
+                    <th>最大宽度</th>
+                    <th>总长度</th>
+                    <th>置信度</th>
+                    <th>严重等级</th>
+                    <th>处理建议</th>
+                </tr>
+                </thead>
+
+                <tbody>
+                {% for record in records %}
+                <tr>
+                    <td>{{ record.image_id }}</td>
+                    <td>{{ record.capture_id }}</td>
+
+                    <td>
+                        {% if record.original_image_path %}
+                            <img class="report-img"
+                                src="{{ url_for('uploaded_file', filename=record.original_image_path.replace('\\', '/').split('/')[-1]) }}"
+                                alt="原始图">
+                        {% else %}
+                            <span class="no-img">无</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if record.image_path %}
+                            <img class="report-img"
+                                src="{{ url_for('uploaded_file', filename=record.image_path.replace('\\', '/').split('/')[-1]) }}"
+                                alt="检测图">
+                        {% else %}
+                            <span class="no-img">无</span>
+                        {% endif %}
+                    </td>
+
+                    <td>{{ record.image_filename }}</td>
+                    <td>{{ record.captured_at }}</td>
+                    <td>{{ record.crack_count }}</td>
+                    <td>{{ record.crack_area }}</td>
+                    <td>{{ record.max_width }}</td>
+                    <td>{{ record.total_length }}</td>
+                    <td>{{ record.confidence }}</td>
+                    <td>{{ record.severity }}</td>
+                    <td>{{ record.suggestion }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+            <p style="text-align:center; color:#777;">当前任务暂无检测记录。</p>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2>四、巡检结论</h2>
+
+        <div class="conclusion">
+            {% if workorder.ai_conclusion %}
+                {{ workorder.ai_conclusion }}
+                <div style="margin-top:10px;color:#666;font-size:13px;">
+                    DeepSeek 模型：{{ workorder.ai_model }}；生成时间：{{ workorder.ai_analyzed_at }}
+                </div>
+            {% elif highest_severity == "严重" or highest_severity == "HIGH" %}
+                本次巡检发现严重裂纹异常，建议尽快安排人工复核，并制定维修或加固方案。
+            {% elif highest_severity == "中等" or highest_severity == "MEDIUM" %}
+                本次巡检发现中等程度裂纹异常，建议安排人工复核，并持续观察裂纹发展情况。
+            {% elif highest_severity == "轻微" or highest_severity == "LOW" %}
+                本次巡检发现轻微裂纹，建议定期巡检并做好记录。
+            {% elif total_crack_count == 0 %}
+                本次巡检未发现明显裂纹异常。
+            {% else %}
+                本次巡检已完成，建议结合现场情况进一步复核检测结果。
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="btn-area">
+        <a class="btn btn-blue" href="/workorder_page/{{ workorder.workorder_id }}">返回任务详情</a>
+        <a class="btn btn-blue" href="/workorders_page">返回任务列表</a>
+        <form class="inline-form" method="post"
+              action="/workorder_page/{{ workorder.workorder_id }}/deepseek_analysis">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="btn btn-orange" type="submit">DeepSeek 生成巡检结论</button>
+        </form>
+        <a class="btn btn-orange" href="javascript:window.print()">打印/保存报告</a>
+    </div>
+</div>
+
+</body>
+</html>

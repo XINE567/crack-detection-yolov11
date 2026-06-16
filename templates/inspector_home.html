@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+    <title>巡检人员首页</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            margin: 30px;
+            background-color: #f5f7fa;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .nav {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            background: white;
+            border-collapse: collapse;
+            margin-top: 25px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background: #2f6fed;
+            color: white;
+        }
+
+        a {
+            color: #2f6fed;
+            font-weight: bold;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="nav">
+    当前用户：{{ username }} |
+    <a href="/logout">退出登录</a>
+</div>
+
+<h1>巡检人员首页</h1>
+
+<table>
+    <thead>
+    <tr>
+        <th>工单ID</th>
+        <th>巡检位置</th>
+        <th>状态</th>
+        <th>创建时间</th>
+        <th>完成时间</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    {% for order in workorders %}
+    <tr>
+        <td>{{ order.workorder_id }}</td>
+        <td>{{ order.location }}</td>
+        <td>{{ order.status }}</td>
+        <td>{{ order.created_at }}</td>
+        <td>{{ order.completed_at }}</td>
+        <td>
+            <a href="/workorder_page/{{ order.workorder_id }}">查看详情</a>
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+</body>
+</html>

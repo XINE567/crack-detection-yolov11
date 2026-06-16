@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+    <title>巡检任务详情</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            margin: 30px;
+            background-color: #f5f7fa;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 1450px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 28px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .nav {
+            text-align: right;
+            margin-bottom: 20px;
+            color: #555;
+        }
+
+        .nav a {
+            color: #2f6fed;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        h1, h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        .notice {
+            background: #f0f6ff;
+            border-left: 5px solid #2f6fed;
+            padding: 12px 16px;
+            margin: 20px 0;
+            color: #555;
+            line-height: 1.8;
+        }
+
+        .info {
+            margin-top: 20px;
+            line-height: 2;
+            font-size: 16px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px 35px;
+            margin-top: 18px;
+        }
+
+        .info-item {
+            border-bottom: 1px solid #eee;
+            padding: 6px 0;
+        }
+
+        .label {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .status-waiting {
+            color: #666;
+            font-weight: bold;
+        }
+
+        .status-running {
+            color: orange;
+            font-weight: bold;
+        }
+
+        .status-finished {
+            color: green;
+            font-weight: bold;
+        }
+
+        .status-other {
+            color: #333;
+            font-weight: bold;
+        }
+
+        .button-area {
+            text-align: center;
+            margin: 25px 0;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 22px;
+            border-radius: 5px;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            margin: 0 6px;
+        }
+
+        .btn-blue {
+            background: #2f6fed;
+            color: white;
+        }
+
+        .btn-orange {
+            background: #ff9800;
+            color: white;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 9px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        th {
+            background-color: #2f6fed;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f6ff;
+        }
+
+        .severity-none {
+            color: #666;
+            font-weight: bold;
+        }
+
+        .severity-light {
+            color: green;
+            font-weight: bold;
+        }
+
+        .severity-medium {
+            color: orange;
+            font-weight: bold;
+        }
+
+        .severity-high {
+            color: red;
+            font-weight: bold;
+        }
+
+        .empty {
+            text-align: center;
+            color: #777;
+            padding: 30px;
+            background: #fafafa;
+            margin-top: 20px;
+            border-radius: 6px;
+            border: 1px solid #eee;
+        }
+
+        .footer-links {
+            text-align: center;
+            margin-top: 25px;
+        }
+
+        .footer-links a {
+            color: #2f6fed;
+            text-decoration: none;
+            font-weight: bold;
+            margin: 0 10px;
+        }
+
+        .thumb-img {
+            width: 90px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            background-color: #f5f5f5;
+        }
+
+        .no-img {
+            color: #999;
+            font-size: 13px;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        .upload-form {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            padding: 20px;
+            margin: 20px 0 30px;
+            border: 1px solid #dbe5f3;
+            border-radius: 10px;
+            background: #f8fbff;
+        }
+
+        .upload-form label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .upload-form input, .upload-form select, .upload-form textarea {
+            width: 100%;
+            padding: 9px;
+        }
+
+        .upload-form .wide {
+            grid-column: 1 / -1;
+        }
+
+        @media (max-width: 900px) {
+            .upload-form {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <div class="nav">
+        <a href="/home">返回首页</a> |
+        <a href="/workorders_page">返回任务列表</a> |
+        <a href="/logout">退出登录</a>
+    </div>
+
+    <h1>巡检任务详情</h1>
+
+    {% if workorder.source == "manual" %}
+        <div class="notice">
+            本任务由人工新建，可在下方人工上传采集与检测记录，也可由 RK3588 使用任务 ID 作为
+            <strong>session_id</strong> 上传检测结果。
+        </div>
+    {% endif %}
+
+    <h2>一、任务基本信息</h2>
+
+    <div class="info-grid">
+        <div class="info-item">
+            <span class="label">任务ID / Session ID：</span>
+            {{ workorder.workorder_id }}
+        </div>
+
+        <div class="info-item">
+            <span class="label">巡检位置：</span>
+            {{ workorder.location }}
+        </div>
+
+        <div class="info-item">
+            <span class="label">巡检人员：</span>
+            {% if workorder.inspector_name %}
+                {{ workorder.inspector_name }}
+            {% elif workorder.username %}
+                {{ workorder.username }}
+            {% else %}
+                未指定
+            {% endif %}
+        </div>
+
+        <div class="info-item">
+            <span class="label">采集数量：</span>
+            {% if workorder.capture_count is not none %}
+                {{ workorder.capture_count }}
+            {% else %}
+                0
+            {% endif %}
+        </div>
+
+        <div class="info-item">
+            <span class="label">任务状态：</span>
+            {% if workorder.status == "待开始" or workorder.status == "待接收" %}
+                <span class="status-waiting">{{ workorder.status }}</span>
+            {% elif workorder.status == "巡检中" %}
+                <span class="status-running">{{ workorder.status }}</span>
+            {% elif workorder.status == "已完成" %}
+                <span class="status-finished">{{ workorder.status }}</span>
+            {% else %}
+                <span class="status-other">{{ workorder.status }}</span>
+            {% endif %}
+        </div>
+
+        <div class="info-item">
+            <span class="label">任务来源：</span>
+            {% if workorder.source == "manual" %}人工新建{% else %}RK3588 上传{% endif %}
+        </div>
+
+        <div class="info-item">
+            <span class="label">创建时间：</span>
+            {{ workorder.created_at }}
+        </div>
+
+        <div class="info-item">
+            <span class="label">巡检开始时间：</span>
+            {{ workorder.start_time }}
+        </div>
+
+        <div class="info-item">
+            <span class="label">巡检结束时间：</span>
+            {{ workorder.end_time }}
+        </div>
+
+        <div class="info-item">
+            <span class="label">完成时间：</span>
+            {{ workorder.completed_at }}
+        </div>
+
+        <div class="info-item">
+            <span class="label">任务说明：</span>
+            {% if workorder.description %}
+                {{ workorder.description }}
+            {% else %}
+                无
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="button-area">
+        <a href="/report_page/{{ workorder.workorder_id }}" class="btn btn-orange">
+            生成巡检报告
+        </a>
+
+        <a href="/workorders_page" class="btn btn-blue">
+            返回任务列表
+        </a>
+
+        <a href="/records_page" class="btn btn-blue">
+            查看全部巡检记录
+        </a>
+    </div>
+
+    {% if workorder.source == "manual" %}
+    <h2>二、人工上传采集与检测记录</h2>
+
+    <form class="upload-form" method="post"
+          action="/workorder_page/{{ workorder.workorder_id }}/manual_upload"
+          enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div>
+            <label>检测图（必填）</label>
+            <input type="file" name="detected_image" accept="image/*" required>
+        </div>
+        <div>
+            <label>原始图（选填）</label>
+            <input type="file" name="original_image" accept="image/*">
+        </div>
+        <div>
+            <label>采集ID（选填）</label>
+            <input type="text" name="capture_id" maxlength="100" placeholder="留空自动生成">
+        </div>
+        <div>
+            <label>采集时间</label>
+            <input type="datetime-local" name="captured_at">
+        </div>
+        <div>
+            <label>裂纹数量</label>
+            <input type="number" name="crack_count" min="0" step="1" value="0" required>
+        </div>
+        <div>
+            <label>裂纹面积</label>
+            <input type="number" name="crack_area" min="0" step="any" value="0" required>
+        </div>
+        <div>
+            <label>最大宽度</label>
+            <input type="number" name="max_width" min="0" step="any" value="0" required>
+        </div>
+        <div>
+            <label>总长度</label>
+            <input type="number" name="total_length" min="0" step="any" value="0" required>
+        </div>
+        <div>
+            <label>置信度（0-1）</label>
+            <input type="number" name="confidence" min="0" max="1" step="any" value="0" required>
+        </div>
+        <div>
+            <label>严重等级</label>
+            <select name="severity">
+                <option value="无">无</option>
+                <option value="轻微">轻微</option>
+                <option value="中等">中等</option>
+                <option value="严重">严重</option>
+            </select>
+        </div>
+        <div class="wide">
+            <label>处理建议</label>
+            <textarea name="suggestion" maxlength="500" rows="3"></textarea>
+        </div>
+        <div class="wide">
+            <label>
+                <input type="checkbox" name="mark_completed" value="1" style="width:auto;">
+                上传后将任务标记为已完成
+            </label>
+        </div>
+        <div class="wide button-area">
+            <button type="submit" class="btn btn-blue">上传检测记录</button>
+        </div>
+    </form>
+    {% endif %}
+
+    <h2>{% if workorder.source == "manual" %}三{% else %}二{% endif %}、该任务下的采集与检测记录</h2>
+
+    {% if records and records|length > 0 %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+            <tr>
+                <th>图像ID</th>
+                <th>采集ID</th>
+                <th>原始图</th>
+                <th>检测图</th>
+                <th>图片文件名</th>
+                <th>采集时间</th>
+                <th>入库时间</th>
+                <th>裂纹数量</th>
+                <th>裂纹面积</th>
+                <th>最大宽度</th>
+                <th>总长度</th>
+                <th>置信度</th>
+                <th>严重等级</th>
+                <th>处理建议</th>
+                <th>详情</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            {% for record in records %}
+            <tr>
+                <td>{{ record.image_id }}</td>
+                <td>{{ record.capture_id }}</td>
+
+                <td>
+                    {% if record.original_image_path %}
+                        <img class="thumb-img"
+                            src="{{ url_for('uploaded_file', filename=record.original_image_path.replace('\\', '/').split('/')[-1]) }}"
+                            alt="原始图">
+                    {% else %}
+                        <span class="no-img">无</span>
+                    {% endif %}
+                </td>
+
+                <td>
+                    {% if record.image_path %}
+                        <img class="thumb-img"
+                            src="{{ url_for('uploaded_file', filename=record.image_path.replace('\\', '/').split('/')[-1]) }}"
+                            alt="检测图">
+                    {% else %}
+                        <span class="no-img">无</span>
+                    {% endif %}
+                </td>
+
+                <td>{{ record.image_filename }}</td>
+                <td>{{ record.captured_at }}</td>
+                <td>{{ record.upload_time }}</td>
+                <td>{{ record.crack_count }}</td>
+                <td>{{ record.crack_area }}</td>
+                <td>{{ record.max_width }}</td>
+                <td>{{ record.total_length }}</td>
+                <td>{{ record.confidence }}</td>
+
+                <td>
+                    {% if record.severity == "无" %}
+                        <span class="severity-none">无</span>
+                    {% elif record.severity == "轻微" %}
+                        <span class="severity-light">轻微</span>
+                    {% elif record.severity == "中等" %}
+                        <span class="severity-medium">中等</span>
+                    {% elif record.severity == "严重" %}
+                        <span class="severity-high">严重</span>
+                    {% else %}
+                        {{ record.severity }}
+                    {% endif %}
+                </td>
+
+                <td>{{ record.suggestion }}</td>
+
+                <td>
+                    <a href="/record_page/{{ record.image_id }}" class="btn btn-blue">
+                        查看图片详情
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <div class="empty">
+            {% if workorder.source == "manual" %}
+                当前任务下暂无采集与检测记录。可在上方人工上传，或等待 RK3588 上传。
+            {% else %}
+                当前任务下暂无采集与检测记录。
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <div class="footer-links">
+        <a href="/workorders_page">返回任务列表</a>
+        <a href="/records_page">查看全部巡检记录</a>
+        <a href="/home">返回首页</a>
+    </div>
+
+</div>
+
+</body>
+</html>

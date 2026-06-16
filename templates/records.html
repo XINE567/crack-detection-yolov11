@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+    <title>巡检历史记录</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            margin: 30px;
+            background-color: #f5f7fa;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        th {
+            background-color: #2f6fed;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f6ff;
+        }
+
+        .severity-light {
+            color: green;
+            font-weight: bold;
+        }
+
+        .severity-medium {
+            color: orange;
+            font-weight: bold;
+        }
+
+        .severity-high {
+            color: red;
+            font-weight: bold;
+        }
+
+        a {
+            color: #2f6fed;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+<div style="text-align: right; margin-bottom: 20px;">
+    <a href="/home">返回首页</a> |
+    <a href="/workorders_page">返回任务管理</a> |
+    <a href="/logout">退出登录</a>
+</div>
+
+<h1>建筑表面裂纹巡检历史记录</h1>
+
+<table>
+    <thead>
+    <tr>
+        <th>图像ID</th>
+        <th>工单ID</th>
+        <th>巡检位置</th>
+        <th>工单状态</th>
+        <th>上传时间</th>
+        <th>裂纹数量</th>
+        <th>裂纹面积</th>
+        <th>最大宽度</th>
+        <th>总长度</th>
+        <th>严重等级</th>
+        <th>处理建议</th>
+        <th>详情</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    {% for record in records %}
+    <tr>
+        <td>{{ record.image_id }}</td>
+        <td>{{ record.workorder_id }}</td>
+        <td>{{ record.location }}</td>
+        <td>{{ record.status }}</td>
+        <td>{{ record.upload_time }}</td>
+        <td>{{ record.crack_count }}</td>
+        <td>{{ record.crack_area }}</td>
+        <td>{{ record.max_width }}</td>
+        <td>{{ record.total_length }}</td>
+
+        <td>
+            {% if record.severity == "轻微" %}
+                <span class="severity-light">轻微</span>
+            {% elif record.severity == "中等" %}
+                <span class="severity-medium">中等</span>
+            {% elif record.severity == "严重" %}
+                <span class="severity-high">严重</span>
+            {% else %}
+                {{ record.severity }}
+            {% endif %}
+        </td>
+
+        <td>{{ record.suggestion }}</td>
+
+        <td>
+            <a href="/record_page/{{ record.image_id }}">查看详情</a>
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+</body>
+</html>

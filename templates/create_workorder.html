@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+    <title>人工新建巡检任务</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            margin: 30px;
+            background-color: #f5f7fa;
+        }
+
+        .container {
+            width: 680px;
+            margin: 45px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        label {
+            display: block;
+            margin-top: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            margin-top: 8px;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+        }
+
+        textarea {
+            height: 90px;
+            resize: vertical;
+        }
+
+        .btn-group {
+            margin-top: 25px;
+            text-align: center;
+        }
+
+        button {
+            padding: 10px 25px;
+            background: #2f6fed;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .btn-link {
+            display: inline-block;
+            padding: 10px 25px;
+            background: #2f6fed;
+            color: white;
+            border-radius: 5px;
+            text-decoration: none;
+        }
+
+        .notice {
+            padding: 14px 16px;
+            border-left: 4px solid #2f6fed;
+            border-radius: 8px;
+            background: #eff6ff;
+            color: #44546a;
+            line-height: 1.7;
+        }
+
+        .field-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0 18px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>人工新建巡检任务</h1>
+
+    <div class="notice">
+        此处用于人工新建巡检任务。保存后可在任务详情中人工上传采集与检测记录；
+        也可将生成的任务 ID 作为 RK3588 的 session_id，由设备执行并上传结果。
+    </div>
+
+    <form method="post" action="/create_workorder">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label>巡检位置</label>
+        <input type="text" name="location" maxlength="255" placeholder="例如：教学楼A区外墙" required>
+
+        <label>工单说明</label>
+        <textarea name="description" placeholder="例如：对教学楼A区外墙进行裂纹巡检"></textarea>
+
+        <div class="field-grid">
+            {% if users %}
+                <div>
+                    <label>巡检负责人</label>
+                    <select name="user_id" required>
+                        {% for user in users %}
+                            <option value="{{ user.id }}">{{ user.username }}（{{ user.role }}）</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% endif %}
+
+            <div>
+                <label>任务状态</label>
+                <select name="status" required>
+                    <option value="待接收">待接收</option>
+                    <option value="巡检中">巡检中</option>
+                    <option value="已完成">已完成</option>
+                </select>
+            </div>
+
+            <div>
+                <label>开始时间</label>
+                <input type="datetime-local" name="start_time">
+            </div>
+
+            <div>
+                <label>结束时间</label>
+                <input type="datetime-local" name="end_time">
+            </div>
+        </div>
+
+        <div class="btn-group">
+            <button type="submit">保存任务</button>
+            <a class="btn-link" href="/workorders_page">返回任务列表</a>
+        </div>
+    </form>
+</div>
+
+</body>
+</html>

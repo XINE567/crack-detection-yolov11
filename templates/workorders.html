@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+    <title>巡检任务列表</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            margin: 30px;
+            background-color: #f5f7fa;
+        }
+
+        .nav {
+            text-align: right;
+            margin-bottom: 20px;
+            color: #555;
+        }
+
+        .nav a {
+            color: #2f6fed;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .tip {
+            text-align: center;
+            color: #666;
+            margin-top: 10px;
+            line-height: 1.8;
+        }
+
+        .button-area {
+            text-align: center;
+            margin: 25px 0;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 22px;
+            border-radius: 5px;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+        }
+
+        .btn-blue {
+            background-color: #2f6fed;
+            color: white;
+        }
+
+        .btn-red {
+            background-color: #d9534f;
+            color: white;
+        }
+
+        .btn-green {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            margin-top: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        th {
+            background-color: #2f6fed;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f6ff;
+        }
+
+        .status-waiting {
+            color: #666;
+            font-weight: bold;
+        }
+
+        .status-running {
+            color: orange;
+            font-weight: bold;
+        }
+
+        .status-finished {
+            color: green;
+            font-weight: bold;
+        }
+
+        .status-other {
+            color: #333;
+            font-weight: bold;
+        }
+
+        .empty {
+            text-align: center;
+            color: #777;
+            padding: 30px;
+            background: white;
+            margin-top: 20px;
+            border-radius: 6px;
+        }
+
+        .footer-links {
+            text-align: center;
+            margin-top: 25px;
+        }
+
+        .footer-links a {
+            color: #2f6fed;
+            text-decoration: none;
+            font-weight: bold;
+            margin: 0 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="nav">
+    当前用户：{{ username }} |
+    <a href="/home">返回首页</a> |
+    <a href="/logout">退出登录</a>
+</div>
+
+<h1>巡检任务列表</h1>
+
+<div class="tip">
+    人工新建后可在任务详情中自行上传图片和检测结果；RK3588 也可获取并执行待接收任务。
+</div>
+
+<form method="post" action="/delete_selected_workorders"
+      onsubmit="return confirm('确定要删除选中的巡检任务及其关联图片和检测结果吗？此操作不可恢复！');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <div class="button-area">
+        <a href="/create_workorder" class="btn btn-blue">
+            人工新建任务
+        </a>
+
+        {% if role == "admin" %}
+            <button type="submit" class="btn btn-red">删除选中任务</button>
+        {% endif %}
+    </div>
+
+    {% if workorders and workorders|length > 0 %}
+    <table>
+        <thead>
+        <tr>
+            {% if role == "admin" %}<th>选择</th>{% endif %}
+            <th>任务ID</th>
+            <th>巡检位置</th>
+            <th>巡检人员</th>
+            <th>采集数量</th>
+            <th>任务状态</th>
+            <th>创建时间</th>
+            <th>开始时间</th>
+            <th>结束时间</th>
+            <th>完成时间</th>
+            <th>详情</th>
+        </tr>
+        </thead>
+
+        <tbody>
+        {% for order in workorders %}
+        <tr>
+            {% if role == "admin" %}
+                <td><input type="checkbox" name="workorder_ids" value="{{ order.workorder_id }}"></td>
+            {% endif %}
+
+            <td>{{ order.workorder_id }}</td>
+
+            <td>{{ order.location }}</td>
+
+            <td>
+                {% if order.inspector_name %}
+                    {{ order.inspector_name }}
+                {% elif order.username %}
+                    {{ order.username }}
+                {% else %}
+                    未指定
+                {% endif %}
+            </td>
+
+            <td>
+                {% if order.capture_count is not none %}
+                    {{ order.capture_count }}
+                {% else %}
+                    0
+                {% endif %}
+            </td>
+
+            <td>
+                {% if order.status == "待开始" or order.status == "待接收" %}
+                    <span class="status-waiting">{{ order.status }}</span>
+                {% elif order.status == "巡检中" %}
+                    <span class="status-running">{{ order.status }}</span>
+                {% elif order.status == "已完成" %}
+                    <span class="status-finished">{{ order.status }}</span>
+                {% else %}
+                    <span class="status-other">{{ order.status }}</span>
+                {% endif %}
+            </td>
+
+            <td>{{ order.created_at }}</td>
+            <td>{{ order.start_time }}</td>
+            <td>{{ order.end_time }}</td>
+            <td>{{ order.completed_at }}</td>
+
+            <td>
+                <a href="/workorder_page/{{ order.workorder_id }}" class="btn btn-blue">
+                    查看详情
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <div class="empty">
+            当前暂无巡检任务。等待 RK3588 上传，或点击“人工新建任务”提前登记任务。
+        </div>
+    {% endif %}
+</form>
+
+<div class="footer-links">
+    <a href="/records_page">查看巡检记录</a>
+    <a href="/home">返回首页</a>
+</div>
+
+</body>
+</html>

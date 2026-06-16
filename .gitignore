@@ -1,0 +1,33 @@
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 虚拟环境
+venv/
+.env/
+.venv/
+env/
+
+# VS Code
+.vscode/
+
+# 上传图片和测试文件
+uploads/
+test.jpg
+test_images/
+
+# 数据库配置中的敏感信息
+# 如果 config.py 里有真实密码，建议不要上传
+config.py
+
+# 大模型文件
+*.pt
+*.onnx
+*.rknn
+*.engine
+
+# 系统文件
+.DS_Store
+Thumbs.db

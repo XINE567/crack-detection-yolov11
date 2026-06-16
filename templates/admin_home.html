@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+    <title>管理员首页</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            margin: 30px;
+            background-color: #f5f7fa;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .nav {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+            margin-top: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            text-align: center;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .number {
+            font-size: 30px;
+            font-weight: bold;
+            color: #2f6fed;
+        }
+
+        .menu {
+            margin-top: 35px;
+            text-align: center;
+        }
+
+        .menu a {
+            display: inline-block;
+            margin: 10px;
+            padding: 12px 25px;
+            background: #2f6fed;
+            color: white;
+            border-radius: 5px;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="nav">
+    当前用户：{{ username }} |
+    <a href="/logout">退出登录</a>
+</div>
+
+<h1>管理员首页</h1>
+
+<div class="cards">
+    <div class="card">
+        <div class="number">{{ total_orders }}</div>
+        <div>工单总数</div>
+    </div>
+
+    <div class="card">
+        <div class="number">{{ finished_orders }}</div>
+        <div>已完成工单</div>
+    </div>
+
+    <div class="card">
+        <div class="number">{{ total_images }}</div>
+        <div>巡检图片数</div>
+    </div>
+
+    <div class="card">
+        <div class="number">{{ abnormal_count }}</div>
+        <div>异常记录数</div>
+    </div>
+</div>
+
+<div class="menu">
+    <a href="/create_workorder">新建工单</a>
+    <a href="/workorders_page">工单管理</a>
+    <a href="/records_page">巡检记录</a>
+</div>
+
+</body>
+</html>

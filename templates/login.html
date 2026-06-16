@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+    <title>系统登录</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            background: #eef3f8;
+            margin: 0;
+            padding: 0;
+        }
+
+        .login-box {
+            width: 380px;
+            margin: 120px auto;
+            background: white;
+            padding: 35px;
+            border-radius: 10px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2f6fed;
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+            color: #333;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-top: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 25px;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            background: #2f6fed;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .error {
+            color: red;
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .tip {
+            font-size: 13px;
+            color: #666;
+            margin-top: 18px;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-box">
+    <h1>裂纹巡检系统登录</h1>
+
+    <form method="post" action="/login">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label>用户名</label>
+        <input type="text" name="username" placeholder="请输入用户名">
+
+        <label>密码</label>
+        <input type="password" name="password" placeholder="请输入密码">
+
+        <button type="submit">登录</button>
+    </form>
+
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <div class="tip">
+        测试账号：<br>
+        管理员：admin / 123456<br>
+        巡检人员：inspector / 123456
+    </div>
+</div>
+
+</body>
+</html>
